@@ -68,7 +68,12 @@ namespace DIContainer
             var CtorParams = new List<object>();
             ConstructorInfo DesiredCtor = ImplementationType.GetConstructors(BindingFlags.Public | BindingFlags.Instance).First();
             foreach (ParameterInfo parameter in DesiredCtor.GetParameters())
-                CtorParams.Add(ResolveByType(parameter.ParameterType));
+            {
+                if (parameter.ParameterType.IsValueType)
+                    CtorParams.Add(parameter.ParameterType);
+                else
+                    CtorParams.Add(ResolveByType(parameter.ParameterType));
+            }
 
             object ResultObject = Activator.CreateInstance(ImplementationType, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance, null, CtorParams.ToArray(), null);
             if (implInfo.LifeTime == ImplementationLifeTime.Singleton && !ImplementationInstances.ContainsKey(ImplementationType))
