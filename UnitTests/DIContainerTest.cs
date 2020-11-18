@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using DIContainer;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace UnitTests
 {
@@ -40,9 +41,9 @@ namespace UnitTests
             dependencies.Register<IRepository, RepositoryImplementation>();
 
             var provider = new DependencyProvider(dependencies);
-            var services = provider.Resolve<IEnumerable<IService>>() as IList<object>;
+            var services = provider.Resolve<IEnumerable<IService>>().ToArray();
 
-            Assert.AreEqual(services.Count, 2);
+            Assert.AreEqual(services.Length, 2);
             Assert.AreEqual((services[0] as ServiceImplementation).repository.IdentificateRepository(), RepositoryAnswer);
             Assert.AreEqual((services[1] as AnotherServiceImplementation).repository.IdentificateRepository(), RepositoryAnswer);
         }
@@ -134,15 +135,15 @@ namespace UnitTests
 
             Assert.IsTrue(Equals(service1, service2));
 
-            var service3 = Task.Run(() => provider.Resolve<IService>()).Result;
-            var service4 = Task.Run(() => provider.Resolve<IService>()).Result;
-            var service5 = Task.Run(() => provider.Resolve<IService>()).Result;
+            var service3 = Task.Run(() => provider.Resolve<IService>());
+            var service4 = Task.Run(() => provider.Resolve<IService>());
+            var service5 = Task.Run(() => provider.Resolve<IService>());
 
-            Assert.IsTrue(Equals(service3, service4) && 
-                Equals(service4, service5) && 
-                Equals(service3, service5) && 
-                Equals(service3, service2) &&
-                Equals(service3, service1));
+            Assert.IsTrue(Equals(service3.Result, service4.Result) && 
+                Equals(service4.Result, service5.Result) && 
+                Equals(service3.Result, service5.Result) && 
+                Equals(service3.Result, service2) &&
+                Equals(service3.Result, service1));
 
             dependencies = new DependenciesConfiguration();
             dependencies.Register<IService, ServiceImplementation>(ImplementationLifeTime.InstancePerDependency);
@@ -151,10 +152,10 @@ namespace UnitTests
             provider = new DependencyProvider(dependencies);
             service1 = provider.Resolve<IService>();
             service2 = provider.Resolve<IService>();
-            service3 = provider.Resolve<IService>();
+            var service0 = provider.Resolve<IService>();
 
             Assert.IsFalse(Equals(service1, service2));
-            Assert.IsFalse(Equals(service1, service3));
+            Assert.IsFalse(Equals(service1, service0));
         }
     }
 

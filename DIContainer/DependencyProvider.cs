@@ -18,9 +18,9 @@ namespace DIContainer
             this.dependencies = dependencies;
         }
 
-        public object Resolve<TDependency>()
+        public TDependency Resolve<TDependency>()
         {
-            return ResolveByType(typeof(TDependency));
+            return (TDependency)ResolveByType(typeof(TDependency));
         }
 
         private object ResolveByType(Type DependencyType)
@@ -29,7 +29,7 @@ namespace DIContainer
             if (typeof(IEnumerable).IsAssignableFrom(DependencyType))
             {
                 Type RealDependencyType = DependencyType.GetGenericArguments()[0];
-                IList ResultObjectList = new List<object>();
+                IList ResultObjectList = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(RealDependencyType));
                 if (dependencies.config.ContainsKey(RealDependencyType))
                 {
                     foreach (var item in dependencies.config[RealDependencyType])
@@ -68,22 +68,19 @@ namespace DIContainer
             var CtorParams = new List<object>();
             ConstructorInfo DesiredCtor = ImplementationType.GetConstructors(BindingFlags.Public | BindingFlags.Instance).First();
             foreach (ParameterInfo parameter in DesiredCtor.GetParameters())
-            {
-                if (parameter.ParameterType.IsValueType)
-                    CtorParams.Add(parameter.ParameterType);
-                else
-                    CtorParams.Add(ResolveByType(parameter.ParameterType));
-            }
+                CtorParams.Add(ResolveByType(parameter.ParameterType));
 
             object ResultObject = Activator.CreateInstance(ImplementationType, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance, null, CtorParams.ToArray(), null);
-            if (implInfo.LifeTime == ImplementationLifeTime.Singleton && !ImplementationInstances.ContainsKey(ImplementationType))
-                ImplementationInstances.TryAdd(ImplementationType, ResultObject);
+            if (implInfo.LifeTime == ImplementationLifeTime.Singleton && !ImplementationInstances.ContainsKey(ImplementationType)) 
+                if (!ImplementationInstances.TryAdd(ImplementationType, ResultObject))
+                    return ImplementationInstances[ImplementationType];
+
             return ResultObject;
         }
 
         public static bool isGenericDependency(Type t)
         {
-            return t.GetGenericArguments().Length != 0 ? true : false;
+            return t.IsGenericType;
         }
     }
 }
